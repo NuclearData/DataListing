@@ -1,16 +1,10 @@
 # vim: set fileencoding=utf-8 :
 
-from __future__ import print_function
-
-__version__ = "$Revision: 357 $"
-__date__    = "$Date: 2012-10-15 08:59:54 -0600 (Mon, 15 Oct 2012) $"
-__author__  = "$Author: jlconlin%s85048.gridserver.com $"
-
-
 """
 This module will parse an xsdir file.
 """
 
+import pathlib
 import re
 import os
 import collections
@@ -46,6 +40,7 @@ class xsdir(collections.defaultdict):
         self.atomic_mass = collections.OrderedDict()
 
         self.zaids = {}
+        self.entries = []
 
         self._parse()
 
@@ -91,16 +86,17 @@ class xsdir(collections.defaultdict):
                 E = xsdir_entry(Line)
 
                 # Check to assure atomic weight ratio is provided
-                try:
-                    iZAID = int(E.za)
-                    if not iZAID in self.atomic_weight_ratios:
-                        if not iZAID in self.atomic_mass:
-                            print("No atomic weight ratio for {}  {}".format(
-                                iZAID, E.atomic_weight_ratio))
-                except ValueError:
-                    pass
+                # try:
+                #     iZAID = int(E.za)
+                #     if not iZAID in self.atomic_weight_ratios:
+                #         if not iZAID in self.atomic_mass:
+                #             print("No atomic weight ratio for {}  {}".format(
+                #                 iZAID, E.atomic_weight_ratio))
+                # except ValueError:
+                #     pass
 
                 # Store entry in self
+                self.entries.append(E)
                 za = E.za
                 self[za].append(E)
 
@@ -135,7 +131,7 @@ class xsdir_entry(object):
 
         # Get remaining entries
         self.atomic_weight_ratio = float(words[1])
-        self.filename = words[2]
+        self.filename = pathlib.Path(words[2])
         self.access = words[3]
         self.file_type = int(words[4])
         self.address = int(words[5])
@@ -156,10 +152,16 @@ class xsdir_entry(object):
     def __repr__(self): return self.zaid
 
     def __str__(self):
-        entry = '{zaid} {atomic_weight_ratio} {filename} {access} ' \
-                '{file_type} {address} {table_length} {record_length} ' \
-                '{record_length} {temperature:.6E} {ptable}'.format(
-                        **self.__dict__)
+        if self.temperature:
+            entry = '{zaid} {atomic_weight_ratio} {filename} {access} ' \
+                    '{file_type} {address} {table_length} {record_length} ' \
+                    '{record_length} {temperature:.6E} {ptable}'.format(
+                            **self.__dict__)
+        else:
+            entry = '{zaid} {atomic_weight_ratio} {filename} {access} ' \
+                    '{file_type} {address} {table_length} {record_length} ' \
+                    '{record_length} {temperature} {ptable}'.format(
+                            **self.__dict__)
         return entry
 
 if __name__ == "__main__":
