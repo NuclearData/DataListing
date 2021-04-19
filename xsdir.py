@@ -32,10 +32,13 @@ class xsdir(collections.defaultdict):
         1001.60c, 1001.50c, 1001.42c, 1001.53c, 1001.24c, 1001.50d, 1001.30y,
         1001.50m, 1001.70h, 1001.24h]
     """
-    def __init__(self, filename=os.path.join(os.environ['DATAPATH'], 'xsdir')):
+    def __init__(self, filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
         super(xsdir, self).__init__(list)
 
-        self.filename = os.path.abspath(filename)
+        if isinstance(filename, pathlib.PosixPath):
+            self.filename = filename.absolute()
+        else:
+            self.filename = pathlib.Path(filename)
         self.atomic_weight_ratios = collections.OrderedDict()
         self.atomic_mass = collections.OrderedDict()
 
@@ -45,63 +48,63 @@ class xsdir(collections.defaultdict):
         self._parse()
 
     def _parse(self):
-        xsdirFile = open(self.filename, 'r')
-        line = '\n'.join(xsdirFile.readlines())
-        xsdirFile.close()
+        with self.filename.open() as xsdirFile:
+            line = '\n'.join(xsdirFile.readlines())
+            xsdirFile.close()
 
-        self.sections = line.split('directory')
+            self.sections = line.split('directory')
 
-        # Parse elements
-        elements = _card_pattern.split(self.sections[0])
-        for E in elements:
-            Isotopes = _isotope_pattern.findall(E)
-            if Isotopes:
-                self.atomic_mass[int(Isotopes[0][0])] = Isotopes[0][1]
+            # Parse elements
+            elements = _card_pattern.split(self.sections[0])
+            for E in elements:
+                Isotopes = _isotope_pattern.findall(E)
+                if Isotopes:
+                    self.atomic_mass[int(Isotopes[0][0])] = Isotopes[0][1]
 
-                for ZA, amr in Isotopes[1:]:
-                    self.atomic_weight_ratios[int(ZA)] = amr
+                    for ZA, amr in Isotopes[1:]:
+                        self.atomic_weight_ratios[int(ZA)] = amr
 
-        # Parse directory
-        lines = self.sections[1].split('\n')
-        multipleLine = False
-        for entry in lines:
+            # Parse directory
+            lines = self.sections[1].split('\n')
+            multipleLine = False
+            for entry in lines:
 
-            if entry:
-                if multipleLine:
-                    Line += ' '.format(entry.lstrip())
-                    multipleLine = False
+                if entry:
+                    if multipleLine:
+                        Line += ' '.format(entry.lstrip())
+                        multipleLine = False
 
-                elif entry.rstrip().endswith(' +'):
-                    # Multiple line xsdir entry
-                    Line = entry.rstrip()[:-1]
-                    multipleLine = True
-                    continue
+                    elif entry.rstrip().endswith(' +'):
+                        # Multiple line xsdir entry
+                        Line = entry.rstrip()[:-1]
+                        multipleLine = True
+                        continue
 
-                else:
-                    Line = entry
-                    multipleLine = False
+                    else:
+                        Line = entry
+                        multipleLine = False
 
 
-                # Create xsdir_entry object
-                E = xsdir_entry(Line)
+                    # Create xsdir_entry object
+                    E = xsdir_entry(Line)
 
-                # Check to assure atomic weight ratio is provided
-                # try:
-                #     iZAID = int(E.za)
-                #     if not iZAID in self.atomic_weight_ratios:
-                #         if not iZAID in self.atomic_mass:
-                #             print("No atomic weight ratio for {}  {}".format(
-                #                 iZAID, E.atomic_weight_ratio))
-                # except ValueError:
-                #     pass
+                    # Check to assure atomic weight ratio is provided
+                    # try:
+                    #     iZAID = int(E.za)
+                    #     if not iZAID in self.atomic_weight_ratios:
+                    #         if not iZAID in self.atomic_mass:
+                    #             print("No atomic weight ratio for {}  {}".format(
+                    #                 iZAID, E.atomic_weight_ratio))
+                    # except ValueError:
+                    #     pass
 
-                # Store entry in self
-                self.entries.append(E)
-                za = E.za
-                self[za].append(E)
+                    # Store entry in self
+                    self.entries.append(E)
+                    za = E.za
+                    self[za].append(E)
 
-                # Store data individually instead of in a list
-                self.zaids[E.zaid] = E
+                    # Store data individually instead of in a list
+                    self.zaids[E.zaid] = E
 
 class xsdir_entry(object):
     """
