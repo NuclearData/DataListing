@@ -9,6 +9,9 @@ import re
 import os
 import collections
 
+import pandas as pd
+import numpy as np
+
 _float_pattern = r'^|\s(\d*\.\d*)(?=$|\s)'
 _int_pattern   = r'^|\s(\d+)(?=$|\s)'
 _card_pattern  = re.compile(r'^\s{,3}(?=\d)', re.MULTILINE)
@@ -167,8 +170,74 @@ class xsdir_entry(object):
                             **self.__dict__)
         return entry
 
+def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
+    """
+    readXSDIR will read the XSDIR and return two pandas.DataFrame objects;
+
+        1. atomic weight ratios
+        2. xsdir entries
+    """
+    AWRs = {}
+    entries = []
+
+    columns = [
+        "ZAID",
+        "AWR",
+        "path",
+        "access",
+        "file_type",
+        "address",
+        "table_legnth",
+        "record_length",
+        "num_entries",
+        "temperature",
+        "ptable",
+    ]
+    columnType = {
+        "ZAID":"U",
+        "AWR":np.float64,
+        "path":"U",
+        "access":np.int32,
+        "file_type":np.int32,
+        "address":np.int32,
+        "table_legnth":np.int32,
+        "record_length":np.int32,
+        "num_entries":np.int32,
+        "temperature":np.float64,
+        "ptable":bool,
+    }
+
+    # entries = pd.DataFrame(columns = columnType.keys())
+
+    with filename.open('r') as xsdirFile:
+        for line in xsdirFile:
+            if line.strip() == 'atomic weight ratios':
+                break
+
+        # Parse atomic weight ratios
+        for line in xsdirFile:
+            if line.strip() == 'directory':
+                print(line)
+                break
+
+        # Parse entries
+        for line in xsdirFile:
+            # Check if entry extends to next line
+            if line.strip().endswith('+'):
+                continuationIndex = line.rfind("+")
+                line = line[:continuationIndex] + xsdirFile.readline()
+
+            words = line.split()
+            while len(words) < 11:
+                words.append(None)
+            entries.append(words)
+
+    entries = pd.DataFrame(entries, columns=columnType.keys())
+    return (AWRs, entries)
+
 if __name__ == "__main__":
     print("\nI'm parsing XSDIR file(s).\n")
 
-    xs = xsdir()
+    AWRs, entries = readXSDIR()
 
+    # xs = xsdir()
