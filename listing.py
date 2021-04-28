@@ -39,18 +39,20 @@ def library(args, XSDIR):
     List all the different 'libraries' in the XSDIR file.
     """
     libraries = library_list(XSDIR)
-    print("Libraries ({}) in XSDIR:\n\t{}".format(len(libraries), 
-                                                  "\n\t".join(libraries)))
+    print("Libraries ({}) in XSDIR:".format(len(libraries)))
 
     return libraries
 
-def ZAs_list(XSDIR, ZA, temperature=None, lib_type=None):
+def ZAs_list(XSDIR, ZA=None, temperature=None, lib_type=[]):
     """
     Return a list of XSDIR entries for a given ZA and (optionally) temperature
     or lib_type.
     """
-    ZAs = [entry for entry in XSDIR.entries 
-                  if entry.za == ZA]
+    if ZA:
+        ZAs = [entry for entry in XSDIR.entries 
+                      if entry.za == ZA]
+    else:
+        ZAs = XSDIR.entries
 
     if temperature:
         ZAs = [entry for entry in ZAs 
@@ -58,7 +60,7 @@ def ZAs_list(XSDIR, ZA, temperature=None, lib_type=None):
 
     if lib_type:
         ZAs = [entry for entry in ZAs 
-                      if entry.lib_type == lib_type]
+                      if entry.lib_type in lib_type]
 
     return ZAs
 
@@ -150,6 +152,8 @@ if __name__ == "__main__":
         entries = list(args.func(args, XSDIR))
 
         if args.lister == "materials" and not args.material:
+            entries.sort()
+        elif args.lister == "libraries":
             entries.sort()
         printEntries(entries)
     else:
