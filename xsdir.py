@@ -23,6 +23,7 @@ _zaid_pattern = re.compile('''
         (?P<type>[a-zA-Z]{1,2})     # Library type
         ''', re.VERBOSE)
 
+_date_pattern = re.compile(r'\s*\d{2}\/\d{2}\/\d{2,4}\s*')
 class xsdir(collections.defaultdict):
     """
     xsdir will parse an xsdir file and organize all the iformation for "easy"
@@ -194,6 +195,19 @@ def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
         "temperature",
         "ptable",
     ]
+    columnType = {
+        "ZAID":"U",
+        "AWR":float,
+        "path":"U",
+        "access":int,
+        "file_type":int,
+        "address":int,
+        "table_legnth":int,
+        "record_length":int,
+        "num_entries":int,
+        "temperature":float,
+        "ptable":bool,
+    }
 
     with filename.open('r') as xsdirFile:
         for line in xsdirFile:
@@ -202,21 +216,30 @@ def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
 
         # Parse atomic weight ratios
         for line in xsdirFile:
+            if _date_pattern.match(line):
+                break
+            AWRs.extend(line.split())
+
+        # Make sure we are in the directory listing
+        for line in xsdirFile:
             if line.strip() == 'directory':
                 break
 
         # Parse entries
         lines = ""
-        for i, line in enumerate(xsdirFile):
+        for line in xsdirFile:
             # Check if entry extends to next line
             if line.strip().endswith('+'):
                 continuationIndex = line.rfind("+")
                 line = line[:continuationIndex] + xsdirFile.readline()
 
             lines += line
-            print(i, line)
-
-    entries = pd.read_csv(io.StringIO(lines), sep='\s+', names=columns)
+    AWRs = pd.DataFrame(np.reshape(AWRs, (-1, 2)), columns=["ZA", "AWR"]) \
+             .astype({"ZA":int, "AWR":
+                                                            float})
+    entries = pd.read_csv(io.StringIO(lines), sep='\s+', names=list(columnType)) \
+                .fillna(0) \
+                .astype(columnType)
     return (AWRs, entries)
 
 if __name__ == "__main__":
