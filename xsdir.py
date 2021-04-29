@@ -4,6 +4,7 @@
 This module will parse an xsdir file.
 """
 
+import io
 import pathlib
 import re
 import os
@@ -177,7 +178,7 @@ def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
         1. atomic weight ratios
         2. xsdir entries
     """
-    AWRs = {}
+    AWRs = []
     entries = []
 
     columns = [
@@ -193,21 +194,6 @@ def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
         "temperature",
         "ptable",
     ]
-    columnType = {
-        "ZAID":"U",
-        "AWR":np.float64,
-        "path":"U",
-        "access":np.int32,
-        "file_type":np.int32,
-        "address":np.int32,
-        "table_legnth":np.int32,
-        "record_length":np.int32,
-        "num_entries":np.int32,
-        "temperature":np.float64,
-        "ptable":bool,
-    }
-
-    # entries = pd.DataFrame(columns = columnType.keys())
 
     with filename.open('r') as xsdirFile:
         for line in xsdirFile:
@@ -217,22 +203,20 @@ def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
         # Parse atomic weight ratios
         for line in xsdirFile:
             if line.strip() == 'directory':
-                print(line)
                 break
 
         # Parse entries
-        for line in xsdirFile:
+        lines = ""
+        for i, line in enumerate(xsdirFile):
             # Check if entry extends to next line
             if line.strip().endswith('+'):
                 continuationIndex = line.rfind("+")
                 line = line[:continuationIndex] + xsdirFile.readline()
 
-            words = line.split()
-            while len(words) < 11:
-                words.append(None)
-            entries.append(words)
+            lines += line
+            print(i, line)
 
-    entries = pd.DataFrame(entries, columns=columnType.keys())
+    entries = pd.read_csv(io.StringIO(lines), sep='\s+', names=columns)
     return (AWRs, entries)
 
 if __name__ == "__main__":
