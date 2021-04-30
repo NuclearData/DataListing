@@ -4,35 +4,17 @@
 import collections
 import os
 import pathlib
-import typing
-from typing import NewType
+
+import pandas as pd
 
 import xsdir
 import maps
-
-def printEntries(entries):
-    """
-    printEntries will print the ZAIDs and temperatures for every entry
-    """
-    if not entries:
-        return
-
-    if isinstance(entries[0], xsdir.xsdir_entry):
-        for entry in entries:
-            if entry.temperature:
-                print("\t{:12} T={:.4E} (MeV)".format(
-                        entry.zaid, entry.temperature))
-            else:
-                print("\t{:12}".format(entry.zaid))
-    else:
-        for entry in entries:
-            print("\t{:12}".format(entry))
 
 def library_list(XSDIR):
     """
     Return a list of 'libraries' contained in the XSDIR
     """
-    return {entry.filename.parts[0] for entry in XSDIR.entries}
+    return {entry.parts[0] for entry in XSDIR['path']}
 
 def library(args, XSDIR):
     """
@@ -49,18 +31,15 @@ def ZAs_list(XSDIR, ZA=None, temperature=None, lib_type=[]):
     or lib_type.
     """
     if ZA:
-        ZAs = [entry for entry in XSDIR.entries 
-                      if entry.za == ZA]
+        ZAs = XSDIR.query('ZA == @ZA')
     else:
-        ZAs = XSDIR.entries
+        ZAs = XSDIR.ZA
 
     if temperature:
-        ZAs = [entry for entry in ZAs 
-                      if entry.temperature == temperature]
+        ZAs = ZAs.query('temperature == @temperature')
 
     if lib_type:
-        ZAs = [entry for entry in ZAs 
-                      if entry.lib_type in lib_type]
+        ZAs = ZAs[ZAs['lib_type'].isin(lib_type)]
 
     return ZAs
 
@@ -77,13 +56,11 @@ def SaB_list(XSDIR, material, temperature=None):
     Return a list of XSDIR entries for a given material and (optionally)
     temperature
     """
-    mats = [entry for entry in XSDIR.entries
-                  if entry.lib_type == 't']
+    mats = XSDIR.query('lib_type == "t"')
     if material:
-        mats = [entry for entry in mats
-                       if entry.za == material]
+        mats = mats.query('ZA == @material')
     else:
-        mats = {entry.za for entry in mats}
+        mats = mats.ZA
 
     return mats
 
@@ -104,7 +81,8 @@ def parseXSDIR(datapath=None):
     if not datapath:
         datapath = pathlib.Path(os.environ['DATAPATH'], 'xsdir')
 
-    return xsdir.xsdir(datapath)
+    AWRs, entries = xsdir.readXSDIR(datapath)
+    return entries
 
 if __name__ == "__main__":
 
@@ -150,12 +128,6 @@ if __name__ == "__main__":
     print()
     if args.lister:
         entries = list(args.func(args, XSDIR))
-
-        if args.lister == "materials" and not args.material:
-            entries.sort()
-        elif args.lister == "libraries":
-            entries.sort()
-        printEntries(entries)
+        print(entries)
     else:
         parser.print_help()
-
