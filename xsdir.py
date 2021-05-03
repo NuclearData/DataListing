@@ -38,6 +38,7 @@ def _addExtras(XSDIR):
         
     XSDIR['lib_type'] = libTypes
     XSDIR['ZA'] = ZAs
+    XSDIR['T(K)'] = round(XSDIR['temperature']/8.6173E-11, 1)
 
 def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
     """
@@ -49,19 +50,6 @@ def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
     AWRs = []
     entries = []
 
-    columns = [
-        "ZAID",
-        "AWR",
-        "path",
-        "access",
-        "file_type",
-        "address",
-        "table_legnth",
-        "record_length",
-        "num_entries",
-        "temperature",
-        "ptable",
-    ]
     columnType = {
         "ZAID":"U",
         "AWR":float,
@@ -69,7 +57,7 @@ def readXSDIR(filename=pathlib.Path(os.environ['DATAPATH'], 'xsdir')):
         "access":int,
         "file_type":int,
         "address":int,
-        "table_legnth":int,
+        "table_length":int,
         "record_length":int,
         "num_entries":int,
         "temperature":float,
