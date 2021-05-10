@@ -1,133 +1,234 @@
-#! /usr/bin/env python3
 # vim: set fileencoding=utf-8 :
+#! /usr/bin/env python3
 
-import collections
-import os
 import pathlib
+import os
+import collections
+import multiprocessing
+import argparse
+import textwrap
 
 import pandas as pd
+import IPython.display
 
 import xsdir
-import maps
+import ace
 
-def library_list(XSDIR):
-    """
-    Return a list of 'libraries' contained in the XSDIR
-    """
-    return {entry.parts[0] for entry in XSDIR['path']}
+xsdirName = "xsdir.json"
 
-def library(args, XSDIR):
-    """
-    List all the different 'libraries' in the XSDIR file.
-    """
-    libraries = library_list(XSDIR)
-    print("Libraries ({}) in XSDIR:".format(len(libraries)))
+class DataDirectory:
+    def __init__(self, xsdirPath):
+        self.datapath = xsdirPath.parent
 
-    return libraries
+        self.metadataFunctions = {
+            'c': self._fastNeutron,
+            'nc': self._fastNeutron
+        }
 
-def ZAs_list(XSDIR, ZA=None, temperature=None, lib_type=[]):
+        AWRs, self.XSDIR = xsdir.readXSDIR(xsdirPath)
+
+        # Additional columns for metadata
+        metaColumns = {
+            # FastNeutron
+            'NE': int,
+            'length': int,
+            'Emax': float,
+            'GPD': bool,
+            'nubar': str,
+            'CP': bool,
+            'DN': bool,
+            'UR': bool,
+            # Thermal Scattering
+        }
+
+        # Add columns to DataFrame for metadata
+        for name, dtype in metaColumns.items():
+            if name not in self.XSDIR.columns:
+                self.XSDIR[name] = pd.Series(dtype=dtype)
+
+        # libIndices = (self.XSDIR['lib_type'] == 'nc') & \
+        #              (self.XSDIR['ZA'] == 1001)
+        # self.XSDIR = self.XSDIR.loc[libIndices]
+
+    def _fastNeutron(self, index):
+        """
+        Add metadata from all fast neutron ACE files.
+
+        index: Location in self.XSDIR of row where we are adding metadata
+        """
+        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
+        print("{}\t{}".format(self.XSDIR.loc[index].ZAID, path))
+
+        address = self.XSDIR.loc[index].address
+        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
+
+        meta = {}
+        self.XSDIR.loc[index, 'length'] = int(ACE.NXS[1])
+        NE = int(ACE.NXS[3])
+        self.XSDIR.loc[index, 'NE'] = NE
+        self.XSDIR.loc[index, 'Emax'] = round(ACE.XSS[NE], 1)
+        if (ACE.JXS[12] != 0) or (ACE.JXS[13] != 0):
+            self.XSDIR.loc[index, 'GPD'] = True
+        else:
+            self.XSDIR.loc[index, 'GPD'] = False
+
+        if ACE.JXS[2] != 0:
+            if ACE._XSS[(ACE.JXS[2] - 1)] > 0:
+                self.XSDIR.loc[index, 'nubar'] = 'nubar'
+            else:
+                self.XSDIR.loc[index, 'nubar'] = 'both'
+        else:
+            self.XSDIR.loc[index, 'nubar'] = 'no'
+
+        # Charged particle  see XTM:96-200
+        if ACE.NXS[7] > 0:
+            self.XSDIR.loc[index, 'CP'] = True
+        else:
+            self.XSDIR.loc[index, 'CP'] = False
+        # Delayed neutron
+        if ACE.JXS[24] > 0:
+            self.XSDIR.loc[index, 'DN'] = True
+        else:
+            self.XSDIR.loc[index, 'DN'] = False
+        # Unresolvedresonance
+        if ACE.JXS[23] > 0:
+            self.XSDIR.loc[index, 'UR'] = True
+        else:
+            self.XSDIR.loc[index, 'UR'] = False
+
+    def _default(self, index):
+        """
+        _default does nothing, but prevents Python from crashing when 
+        """
+        pass
+
+    def extend(self, index):
+        """
+        extend will add metadata to a row of self.XSDIR given the row's index
+        """
+        lib_type = self.XSDIR.loc[index].lib_type
+
+        self.problems = []
+        try:
+            self.metadataFunctions.get(lib_type, self._default)(index)
+        except Exception as e:
+            print("Problem with {}".format(self.XSDIR.loc[index].ZAID))
+            self.problems.append(index)
+
+
+def loadXSDIR(filename=xsdirName):
     """
-    Return a list of XSDIR entries for a given ZA and (optionally) temperature
-    or lib_type.
+    loadXSDIR will create a pandas DataFrame from a json file on disk. It will
+    first check to see if the filename exists
     """
-    if ZA:
-        ZAs = XSDIR.query('ZA == @ZA')
+    path = pathlib.Path(filename)
+
+    if path.exists():
+        return pd.read_json(path)
     else:
-        ZAs = XSDIR.ZA
+        print(textwrap.dedent("""
+            Can't read XSDIR information from file:
+            \t{} 
+            as it doens't exist""").format(path))
 
-    if temperature:
-        ZAs = ZAs.query('temperature == @temperature')
+        print("Please first run: python listing.py to generate {}"
+              .format(xsdirName))
 
-    if lib_type:
-        ZAs = ZAs[ZAs['lib_type'].isin(lib_type)]
 
-    return ZAs
+class DisplayData:
+    def __init__(self, XSDIR, lib_type=None):
 
-def printZA(args, XSDIR):
-    """
-    List all the ZAIDS for a given ZA
-    """
-    ZAs = ZAs_list(XSDIR, args.za, args.temperature, args.lib_type)
-    print("ZAIDS for ZA={}:", args.za)
-    return ZAs
+        if lib_type:
+            self.XSDIR = XSDIR.query('lib_type == @lib_type')
+        else:
+            self.XSDIR = XSDIR
+        self.lib_type = lib_type
 
-def SaB_list(XSDIR, material, temperature=None):
-    """
-    Return a list of XSDIR entries for a given material and (optionally)
-    temperature
-    """
-    mats = XSDIR.query('lib_type == "t"')
-    if material:
-        mats = mats.query('ZA == @material')
-    else:
-        mats = mats.ZA
+        self._display = {
+            'c': self._fastNeutron,
+            'nc': self._fastNeutron,
+            None: self._default
+        }
 
-    return mats
+    def __call__(self, ZA=None, columns=[]):
+        """
+        """
+        if isinstance(self.lib_type, list):
+            lt = self.lib_type[0]
+        else:
+            lt = self.lib_type
 
-def printSaB(args, XSDIR):
-    """
-    List all the thermal scattering materials. If a material name is given, 
-    list all the ZAIDs for that material.
-    """
-    print("Thermal Scattering (S(α,β)) materials:")
-    mats = SaB_list(XSDIR, args.material, args.temperature)
-    return mats
+        self._display.get(lt, self._default)(ZA, columns)
 
-def parseXSDIR(datapath=None):
-    """
-    parseXSDIR will return a xsdir.xsdir object. If datapath isn't given, it
-    uses the environment variable $DATAPATH
-    """
-    if not datapath:
-        datapath = pathlib.Path(os.environ['DATAPATH'], 'xsdir')
+    def _default(self, ZA=None, columns=[]):
+        """
+        The display function when lib_type doesn't exist
+        """
+        if columns:
+            IPython.display.display(self.XSDIR[[*columns]])
+        else:
+            IPython.display.display(self.XSDIR)
 
-    AWRs, entries = xsdir.readXSDIR(datapath)
-    return entries
+    def _fastNeutron(self, ZA=None, columns=[]):
+        """
+        The display function when asking for a continuous-energy neutron
+        material
+        """
+        if not columns:
+            columns = ['ZAID', 'AWR', 'path', 'ZA', 'T(K)', 'NE', 
+                       'Emax', 'GPD', 'nubar', 'CP', 'DN', 'UR']
 
-if __name__ == "__main__":
+        if ZA:
+            XSDIR = self.XSDIR.query('ZA == @ZA')
+        else:
+            XSDIR = self.XSDIR
 
-    import argparse
+        IPython.display.display(XSDIR[[*columns]])
 
-    description= "Listing the available ACE data"
+
+
+def processInput():
+    description= "Preparing to list available ACE data"
     parser = argparse.ArgumentParser(description=description)
 
-    parser.add_argument('--datapath', type=pathlib.Path, 
+    parser.add_argument('--xsdir', type=pathlib.Path,
         default = pathlib.Path(os.environ['DATAPATH'], 'xsdir'),
         help="Path to xsdir file. Defaults to $DATAPATH/xsdir")
 
-    listers = parser.add_subparsers(dest='lister',
-        help="List available parameters in XSDIR")
+    parser.add_argument('-N', type=int,
+        default=multiprocessing.cpu_count()-1,
+        help="Number of parallel threads.")
 
-    ZALister = listers.add_parser('ZAs',
-        help="List all entries for a given ZA")
-    ZALister.set_defaults(func=printZA)
-    ZALister.add_argument('za', type=int,
-        help="ZA identifier")
-    ZALister.add_argument('-t', '--temperature', type=float,
-        help="Temperature filter")
-    ZALister.add_argument('-l', '--lib-type', type=str, default=None,
-        choices = maps.DataTypes.keys(),
-        help="Library type filter")
+    parser.add_argument('--dont-generate', action='store_true', default=False,
+        help="Don't generate {}".format(xsdirName))
 
-    sabLister = listers.add_parser('materials',
-        help="List thermal scattering materials")
-    sabLister.set_defaults(func=printSaB)
-    sabLister.add_argument('--material',
-        help="Material identifier")
-    sabLister.add_argument('-t', '--temperature', type=float,
-        help="Temperature filter")
+    return parser.parse_args()
 
-    libLister = listers.add_parser('libraries',
-        help="List all libraries")
-    libLister.set_defaults(func=library)
 
-    args = parser.parse_args()
+def generateJSON(xsdirPath):
+    """
+    generateJSON will generate the JSON version of the XSDIR pandas DataFrame.
+    It saves the fil
+    """
+    ddir = DataDirectory(xsdirPath)
+    for index in ddir.XSDIR.index:
+        ddir.extend(index)
 
-    XSDIR = parseXSDIR(args.datapath)
+    # with multiprocessing.Pool(args.N) as pool:
+    #     pool.map(ddir.extend, ddir.XSDIR.index)
 
-    print()
-    if args.lister:
-        entries = list(args.func(args, XSDIR))
-        print(entries)
-    else:
-        parser.print_help()
+    with open(xsdirName, 'w') as jsonFile:
+        json = ddir.XSDIR.to_json(orient='records', default_handler=str, indent=2)
+        jsonFile.write(json)
+
+
+if __name__ == "__main__":
+
+    args = processInput()
+    if not args.dont_generate:
+        generateJSON(args.xsdir)
+
+    XSDIR = loadXSDIR()
+    display = DisplayData(XSDIR)
+    display()
+
