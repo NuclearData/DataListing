@@ -175,7 +175,7 @@ class DisplayData:
         material
         """
         if not columns:
-            columns = ['ZAID', 'AWR', 'path', 'ZA', 'T(K)', 'NE', 
+            columns = ['ZAID', 'AWR', 'library', 'ZA', 'T(K)', 'NE',
                        'Emax', 'GPD', 'nubar', 'CP', 'DN', 'UR']
 
         if ZA:

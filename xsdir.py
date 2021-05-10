@@ -22,8 +22,10 @@ def _addExtras(XSDIR):
     """
     libTypes = []
     ZAs = []
+    libraries = []
 
-    for zaid in XSDIR.ZAID:
+    for entry in XSDIR.itertuples():
+        zaid = entry.ZAID
         za = zaid.split('.')[0]
         try:
             za = int(za)
@@ -35,7 +37,15 @@ def _addExtras(XSDIR):
             if zaid[-2] == 'n':
                 lType = 'nc'
         libTypes.append(lType)
-        
+
+        path = entry.path
+        l = len(path.parents)
+        if l < 2:
+            libraries.append(entry.path)
+        else:
+            libraries.append(entry.path.parents[l-2])
+
+    XSDIR['library'] = libraries
     XSDIR['lib_type'] = libTypes
     XSDIR['ZA'] = ZAs
     XSDIR['T(K)'] = round(XSDIR['temperature']/8.6173E-11, 1)
