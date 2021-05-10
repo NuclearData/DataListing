@@ -13,15 +13,38 @@ import xsdir
 import ace
 
 class DataDirectory:
-    def __init__(self, XSDIR, datapath):
-        self.XSDIR = XSDIR
-        self.datapath = datapath
+    def __init__(self, xsdirPath):
+        self.datapath = xsdirPath.parent
 
         self.metadataFunctions = {
             'c': self._fastNeutron,
             'nc': self._fastNeutron
         }
 
+        AWRs, self.XSDIR = xsdir.readXSDIR(xsdirPath)
+
+        # Additional columns for metadata
+        metaColumns = {
+            # FastNeutron
+            'NE': int,
+            'length': int,
+            'Emax': float,
+            'GPD': bool,
+            'nubar': str,
+            'CP': bool,
+            'DN': bool,
+            'UR': bool,
+            # Thermal Scattering
+        }
+
+        # Add columns to DataFrame for metadata
+        for name, dtype in metaColumns.items():
+            if name not in self.XSDIR.columns:
+                self.XSDIR[name] = pd.Series(dtype=dtype)
+
+        libIndices = (self.XSDIR['lib_type'] == 'nc') & \
+                     (self.XSDIR['ZA'] == 1001)
+        self.XSDIR = self.XSDIR.loc[libIndices]
 
     def _fastNeutron(self, index):
         """
@@ -30,7 +53,7 @@ class DataDirectory:
         index: Location in self.XSDIR of row where we are adding metadata
         """
         path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
-        print(path)
+        print("{}\t{}".format(self.XSDIR.loc[index].ZAID, path))
 
         address = self.XSDIR.loc[index].address
         ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
@@ -75,42 +98,19 @@ class DataDirectory:
         """
         pass
 
-
     def extend(self, index):
         """
         extend will add metadata to a row of self.XSDIR given the row's index
         """
         lib_type = self.XSDIR.loc[index].lib_type
 
-        self.metadataFunctions.get(lib_type, self._default)(index)
+        self.problems = []
+        try:
+            self.metadataFunctions.get(lib_type, self._default)(index)
+        except Exception as e:
+            print("Problem with {}".format(self.XSDIR.loc[index].ZAID))
+            self.problems.append(index)
 
-def getXSDIR(datapath):
-    """
-    getXSDIR will extract the XSDIR data and save it in a pandas.DataFrame. It
-    also adds some additional columns for metadata. It returns the XSDIR.
-    """
-
-    AWRs, XSDIR = xsdir.readXSDIR(datapath)
-
-    # Additional columns for metadata
-    metaColumns = {
-        # FastNeutron
-        'NE': int,
-        'length': int,
-        'Emax': float,
-        'GPD': bool,
-        'nubar': str,
-        'CP': bool,
-        'DN': bool,
-        'UR': bool,
-        # Thermal Scattering
-    }
-
-    # Add columns to DataFrame for metadata
-    for name, dtype in metaColumns.items():
-        if name not in XSDIR.columns:
-            XSDIR[name] = pd.Series(dtype=dtype)
-    return XSDIR
 
 def processInput():
     description= "Preparing to list available ACE data"
@@ -131,14 +131,13 @@ def processInput():
 if __name__ == "__main__":
 
     args = processInput()
-    XSDIR = getXSDIR(args.xsdir)
-    XSDIR = XSDIR.query('ZA == 1001')
+    # XSDIR = XSDIR.query('ZA == 1001')
 
-    ddir = DataDirectory(XSDIR, args.xsdir.parent)
+    ddir = DataDirectory(args.xsdir)
 
     with multiprocessing.Pool(args.N) as pool:
-        pool.map(ddir.extend, XSDIR.index)
+        pool.map(ddir.extend, ddir.XSDIR.index)
 
     with open('xsdir.json', 'w') as jsonFile:
-        json = XSDIR.to_json(orient='records', default_handler=str, indent=2)
+        json = ddir.XSDIR.to_json(orient='records', default_handler=str, indent=2)
         jsonFile.write(json)
