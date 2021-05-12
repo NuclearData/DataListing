@@ -5,10 +5,12 @@ See [Getting Started](GettingStarted.ipynb) to begin using this tool. After view
 
 
 ## Issues and Questions
-Please submit an issue if you have any questions or dicover bugs or deficiencies with the 
+If you have a question, please start a [discussion](https://github.com/NuclearData/DataListing/discussions/) with the developers.
+
+If you dicover a bug or deficiencies, please submit an [Issue](https://github.com/NuclearData/DataListing/issues).
 
 ## Contributing
-We welcome Pull Requests for improvements and bug fixes. Please start a discussion with the developers before spending a lot of time on creating a new feature. 
+We welcome [Pull Requests](https://github.com/NuclearData/DataListing/pulls) for improvements and bug fixes. Please start a [discussion](https://github.com/NuclearData/DataListing/discussions) with the developers before spending a lot of time on creating a new feature. 
 
 ## Distribution
 This package is distributed on GitHub at <https://github.com/NuclearData/DataListing>.
