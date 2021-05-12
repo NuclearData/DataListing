@@ -226,7 +226,7 @@ class DisplayData:
             'p': ['ZAID', 'AWR', 'library', 'ZA', 'T(K)'],
             'm': ['ZAID', 'AWR', 'library', 'ZA', 'T(K)'],
             'y': ['ZAID', 'AWR', 'library', 'ZA', 'T(K)'],
-            None: self._default
+            None: self.XSDIR.columns
         }
 
     def __call__(self, ZA=None, columns=[]):
@@ -238,7 +238,7 @@ class DisplayData:
             lt = self.lib_type
 
         if not columns:
-            columns = self.displayColumns[lt]
+            columns = self.displayColumns.get(lt, self.XSDIR.columns)
 
         if ZA:
             XSDIR = self.XSDIR.query('ZA == @ZA')
@@ -274,7 +274,7 @@ def processInput():
     return parser.parse_args()
 
 
-def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1):
+def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1)):
     """
     generateJSON will generate the JSON version of the XSDIR pandas DataFrame.
     It saves the fil
