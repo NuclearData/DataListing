@@ -4,6 +4,6 @@ This notebook is an interactive way to see what data is available to MCNP. It is
 If you are concerned about what this does you are free to examine the code yourself. It is available as an Open Source project on GitHub at <https://github.com/NuclearData/DataListing>.
 
 ## Types of Nuclear Data 
-- [Fast Neutron](FastNeutron.ipynb)
-- Thermal Scattering S(⍺,ß)
+- [Continuous-Energy Neutron](ContinuousEnergyNeutron.ipynb)
+- [Thermal Scattering S(⍺,ß)](ThermalScattering.ipynb)
 - Dosimetry
