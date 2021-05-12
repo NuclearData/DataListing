@@ -74,9 +74,6 @@ class ace(object):
 
         # Get header (first 12 lines)
         self._processHeader()
-        # Process header arrays
-        # self._processNXS()
-        # self._processJXS()
 
         if not self.headerOnly:
             # Read XSS array
@@ -95,7 +92,6 @@ class ace(object):
         # Determine if we are using old- or new-style header
         line = self._file.readline().strip()
         words = line.split()
-#       words = self._file.readline().strip().split()
 
         if len(words) > 3:
             # Old-style header
