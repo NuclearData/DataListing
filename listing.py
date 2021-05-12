@@ -265,7 +265,7 @@ def processInput():
         help="Path to xsdir file. Defaults to $DATAPATH/xsdir")
 
     parser.add_argument('-N', type=int,
-        default=multiprocessing.cpu_count()-1,
+        default=max(1, multiprocessing.cpu_count()-1),
         help="Number of parallel threads.")
 
     parser.add_argument('--dont-generate', action='store_true', default=False,
@@ -274,7 +274,7 @@ def processInput():
     return parser.parse_args()
 
 
-def generateJSON(xsdirPath):
+def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1):
     """
     generateJSON will generate the JSON version of the XSDIR pandas DataFrame.
     It saves the fil
@@ -283,7 +283,7 @@ def generateJSON(xsdirPath):
     # for index in ddir.XSDIR.index:
     #     ddir.extend(index)
 
-    with multiprocessing.Pool(args.N) as pool:
+    with multiprocessing.Pool(N) as pool:
         results = pool.map(ddir.extend, ddir.XSDIR.index)
 
     results = pd.DataFrame([r for r in results if r])
@@ -304,7 +304,7 @@ if __name__ == "__main__":
 
     args = processInput()
     if not args.dont_generate:
-        generateJSON(args.xsdir)
+        generateJSON(args.xsdir, args.N)
 
     XSDIR = loadXSDIR()
     display = DisplayData(XSDIR)

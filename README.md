@@ -1,18 +1,8 @@
 # ACEListing
 This repository contains everything needed to list the available ACE data on any machine.
 
-See [Availability](Availability.md) to see what ACE data is on your machine.
+See [Getting Started](GettingStarted.ipynb) to begin using this tool. After viewing that, see [Availability](Availability.md) to see what ACE data is on your machine.
 
-## Requirements
-- Python 3.6+
-
-### Third-Party Python Libraries
-We utilize a few third-party libraries. These are all widely used and probably already installed if you use a scientific Python distribution.
-- [Jupyter-lab](https://jupyterlab.readthedocs.io/en/stable/index.html)&mdash;[Project Jupyter's](https://jupyter.org) next-generation notebook interface.
-
-   Even though jupyter-lab is "next-generation", it is completely stable (as of June 2019) and is the future interface for the Jupyter Project.
-
-- [pandas](https://pandas.pydata.org)
 
 ## Issues and Questions
 Please submit an issue if you have any questions or dicover bugs or deficiencies with the 
