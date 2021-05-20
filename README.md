@@ -1,8 +1,8 @@
-# ACEListing
-This repository contains everything needed to list the available ACE data on any machine.
+# Data Listing
+This repository contains everything needed to list the data available for MCNP.
 
 ## Getting Started
-See [Getting Started](GettingStarted.ipynb) to begin using this tool. After viewing that, see [Listing](Listing.md) to see what ACE data is on your machine.
+See [Getting Started](GettingStarted.ipynb) to begin using this tool. After viewing that, see [Listing](Listing.md) to see what data is on your machine.
 
 ## Issues and Questions
 If you have a question, please start a [discussion](https://github.com/NuclearData/DataListing/discussions/) with the developers.
