@@ -46,7 +46,7 @@ def _addExtras(XSDIR):
             libraries.append(entry.path.parents[l-2])
 
     XSDIR['library'] = libraries
-    XSDIR['lib_type'] = libTypes
+    XSDIR['lib_type'] = pd.Series(libTypes, dtype=str)
     XSDIR['ZA'] = ZAs
     XSDIR['T(K)'] = round(XSDIR['temperature']/8.6173E-11, 1)
 

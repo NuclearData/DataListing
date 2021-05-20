@@ -10,6 +10,7 @@ import textwrap
 
 import pandas as pd
 import IPython.display
+from tqdm.contrib.concurrent import process_map
 
 import xsdir
 import ace
@@ -178,33 +179,12 @@ class DataDirectory:
         extend will add metadata to a row of self.XSDIR given the row's index
         """
         lib_type = self.XSDIR.loc[index].lib_type
-        print("{}\t{}".format(self.XSDIR.loc[index].ZAID,
-                              self.XSDIR.loc[index].path))
 
         try:
             return self.metadataFunctions.get(lib_type, self._default)(index)
         except Exception as e:
-            print("Problem with {}".format(self.XSDIR.loc[index].ZAID))
+            # print("Problem reading metadata of: {}".format(self.XSDIR.loc[index].ZAID))
             self.problems.append(index)
-
-
-def loadXSDIR(filename=xsdirName):
-    """
-    loadXSDIR will create a pandas DataFrame from a json file on disk. It will
-    first check to see if the filename exists
-    """
-    path = pathlib.Path(filename)
-
-    if path.exists():
-        return pd.read_json(path)
-    else:
-        print(textwrap.dedent("""
-            Can't read XSDIR information from file:
-            \t{} 
-            as it doens't exist""").format(path))
-
-        print("Please first run: python listing.py to generate {}"
-              .format(xsdirName))
 
 
 class DisplayData:
@@ -256,6 +236,25 @@ class DisplayData:
         else:
             IPython.display.display(self.XSDIR)
 
+
+def loadXSDIR(filename=xsdirName):
+    """
+    loadXSDIR will create a pandas DataFrame from a json file on disk. It will
+    first check to see if the filename exists
+    """
+    path = pathlib.Path(filename)
+
+    if path.exists():
+        return pd.read_json(path)
+    else:
+        print(textwrap.dedent("""
+            Can't read XSDIR information from file:
+            \t{} 
+            as it doens't exist""").format(path))
+
+        print("Please first run: python listing.py to generate {}"
+              .format(xsdirName))
+
 def processInput():
     description= "Preparing to list available ACE data"
     parser = argparse.ArgumentParser(description=description)
@@ -283,10 +282,25 @@ def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1)):
     # for index in ddir.XSDIR.index:
     #     ddir.extend(index)
 
-    with multiprocessing.Pool(N) as pool:
-        results = pool.map(ddir.extend, ddir.XSDIR.index)
+    results = process_map(ddir.extend, ddir.XSDIR.index, max_workers=N,
+                          chunksize=1)
 
-    results = pd.DataFrame([r for r in results if r])
+    dtype = {
+        # Continuous-energy neutron
+        'length': int,
+        'NE': int,
+        'Emax': float,
+        'GPD': bool,
+        'nubar': str,
+        'CP': bool,
+        'DN': bool,
+        'UR': bool,
+
+        # Thermal Scattering
+        'NA': int,
+        'representation': str,
+    }
+    results = pd.DataFrame([r for r in results if r]).fillna(0).astype(dtype)
 
     ddir.XSDIR = pd.merge(ddir.XSDIR, results, on='ZAID')
 
@@ -307,5 +321,11 @@ if __name__ == "__main__":
         generateJSON(args.xsdir, args.N)
 
     XSDIR = loadXSDIR()
-    display = DisplayData(XSDIR)
-    display()
+    # display = DisplayData(XSDIR)
+    # display()
+
+    ddir = DataDirectory(args.xsdir)
+
+    zaid = "40000.56c"
+    zaid = '1001.80c'
+    ddir.extend(ddir.XSDIR.query('ZAID == @zaid').index)
