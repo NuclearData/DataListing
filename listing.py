@@ -26,10 +26,7 @@ class DataDirectory:
             'c': self._fastNeutron,
             'nc': self._fastNeutron,
             't': self._thermalScattering,
-            'h': self._proton,
             'p': self._photon,
-            'm': self._multigroup,
-            'm': self._dosimetry,
         }
 
         AWRs, self.XSDIR = xsdir.readXSDIR(xsdirPath)
@@ -120,59 +117,19 @@ class DataDirectory:
         meta['NE'] = int(ACE.NXS[3])
         return meta
 
-    def _multigroup(self, index):
-        """
-        Add metadata from multigroup ACE files.
-
-        index: Location in self.XSDIR of row where we are adding metadata
-        """
-        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
-
-        address = self.XSDIR.loc[index].address
-        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
-
-        meta = {'ZAID': self.XSDIR.loc[index].ZAID}
-
-        meta['length'] = int(ACE.NXS[1])
-        return meta
-
-    def _proton(self, index):
-        """
-        Add metadata from proton ACE files.
-
-        index: Location in self.XSDIR of row where we are adding metadata
-        """
-        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
-
-        address = self.XSDIR.loc[index].address
-        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
-
-        meta = {'ZAID': self.XSDIR.loc[index].ZAID}
-
-        meta['length'] = int(ACE.NXS[1])
-        return meta
-
-    def _dosimetry(self, index):
-        """
-        Add metadata from dosimetry ACE files.
-
-        index: Location in self.XSDIR of row where we are adding metadata
-        """
-        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
-
-        address = self.XSDIR.loc[index].address
-        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
-
-        meta = {'ZAID': self.XSDIR.loc[index].ZAID}
-
-        meta['length'] = int(ACE.NXS[1])
-        return meta
-
     def _default(self, index):
         """
         _default does nothing, but prevents Python from crashing when
         """
-        pass
+        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
+
+        address = self.XSDIR.loc[index].address
+        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
+
+        meta = {'ZAID': self.XSDIR.loc[index].ZAID}
+
+        meta['length'] = int(ACE.NXS[1])
+        return meta
 
     def extend(self, index):
         """
@@ -255,35 +212,17 @@ def loadXSDIR(filename=xsdirName):
         print("Please first run: python listing.py to generate {}"
               .format(xsdirName))
 
-def processInput():
-    description= "Preparing to list available ACE data"
-    parser = argparse.ArgumentParser(description=description)
-
-    parser.add_argument('--xsdir', type=pathlib.Path,
-        default = pathlib.Path(os.environ['DATAPATH'], 'xsdir'),
-        help="Path to xsdir file. Defaults to $DATAPATH/xsdir")
-
-    parser.add_argument('-N', type=int,
-        default=max(1, multiprocessing.cpu_count()-1),
-        help="Number of parallel threads.")
-
-    parser.add_argument('--dont-generate', action='store_true', default=False,
-        help="Don't generate {}".format(xsdirName))
-
-    return parser.parse_args()
-
-
 def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1)):
     """
     generateJSON will generate the JSON version of the XSDIR pandas DataFrame.
     It saves the fil
     """
     ddir = DataDirectory(xsdirPath)
-    # for index in ddir.XSDIR.index:
-    #     ddir.extend(index)
+    print("after ddir: {}".format(len(ddir.XSDIR)))
 
     results = process_map(ddir.extend, ddir.XSDIR.index, max_workers=N,
                           chunksize=1)
+    print("after results: {}".format(len(ddir.XSDIR)))
 
     dtype = {
         # Continuous-energy neutron
@@ -303,6 +242,7 @@ def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1)):
     results = pd.DataFrame([r for r in results if r]).fillna(0).astype(dtype)
 
     ddir.XSDIR = pd.merge(ddir.XSDIR, results, on='ZAID')
+    print("after merge: {}".format(len(ddir.XSDIR)))
 
     with open(xsdirName, 'w') as jsonFile:
         json = ddir.XSDIR.to_json(orient='records', default_handler=str, indent=2)
@@ -312,6 +252,24 @@ def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1)):
         print("There were problems reading data from these ZAIDs:")
         for ZAID in ddir.problems:
             print("\t{}".format(ZAID))
+
+
+def processInput():
+    description= "Preparing to list available ACE data"
+    parser = argparse.ArgumentParser(description=description)
+
+    parser.add_argument('--xsdir', type=pathlib.Path,
+        default = pathlib.Path(os.environ['DATAPATH'], 'xsdir'),
+        help="Path to xsdir file. Defaults to $DATAPATH/xsdir")
+
+    parser.add_argument('-N', type=int,
+        default=max(1, multiprocessing.cpu_count()-1),
+        help="Number of parallel threads.")
+
+    parser.add_argument('--dont-generate', action='store_true', default=False,
+        help="Don't generate {}".format(xsdirName))
+
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
