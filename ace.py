@@ -93,7 +93,8 @@ class ace(object):
         line = self._file.readline().strip()
         words = line.split()
 
-        if len(words) > 3:
+        version = words[0]
+        if len(version.split('.')) < 3:
             # Old-style header
             self.isNewStyle = False
 
@@ -185,7 +186,10 @@ class ace(object):
         # Temperature
         self._TZ = self.temperature = float(firstWords[2])
         # Processing date
-        self._HD = self.process_date = firstWords[3]
+        try:
+            self._HD = self.process_date = firstWords[3]
+        except IndexError as e:
+            self._HD = self.process_date = ''
 
         line = self._file.readline().rstrip()
         # Comment
@@ -219,6 +223,6 @@ class ace(object):
 if __name__ == "__main__":
     print("\n\nI'm an ACE!\n")
 
-    path = '/Users/jlconlin/Documents/Data/type1/endf71x/Fm/100255.716nc'
+    path = '/Users/jlconlin/Documents/Data/type1/llldos'
 
-    ACE = ace(filename=path, headerOnly=True)
+    ACE = ace(filename=path, start_line=1, headerOnly=True)
