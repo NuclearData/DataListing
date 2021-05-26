@@ -31,18 +31,18 @@ class DataDirectory:
 
         AWRs, self.XSDIR = xsdir.readXSDIR(xsdirPath)
 
-    def _fastNeutron(self, index):
+    def _fastNeutron(self, entry):
         """
         Add metadata from all fast neutron ACE files.
 
         index: Location in self.XSDIR of row where we are adding metadata
         """
-        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
+        path = pathlib.Path(self.datapath, entry.path)
 
-        address = self.XSDIR.loc[index].address
+        address = entry.address
         ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
 
-        meta = {'ZAID': self.XSDIR.loc[index].ZAID}
+        meta = {'ZAID': entry.ZAID}
         meta[ 'length'] = int(ACE.NXS[1])
         NE = int(ACE.NXS[3])
         meta[ 'NE'] = NE
@@ -78,18 +78,18 @@ class DataDirectory:
 
         return meta
 
-    def _thermalScattering(self, index):
+    def _thermalScattering(self, entry):
         """
         Add metadata from thermal scattering ACE files.
 
         index: Location in self.XSDIR of row where we are adding metadata
         """
-        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
+        path = pathlib.Path(self.datapath, entry.path)
 
-        address = self.XSDIR.loc[index].address
+        address = entry.address
         ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
 
-        meta = {'ZAID': self.XSDIR.loc[index].ZAID}
+        meta = {'ZAID': entry.ZAID}
         meta['NA'] = int(ACE.NXS[3] + 1)
         meta['NE'] = int(ACE.NXS[4])
 
@@ -100,48 +100,50 @@ class DataDirectory:
 
         return meta
 
-    def _photon(self, index):
+    def _photon(self, entry):
         """
         Add metadata from photon ACE files.
 
         index: Location in self.XSDIR of row where we are adding metadata
         """
-        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
+        path = pathlib.Path(self.datapath, entry.path)
 
-        address = self.XSDIR.loc[index].address
+        address = entry.address
         ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
 
-        meta = {'ZAID': self.XSDIR.loc[index].ZAID}
+        meta = {'ZAID': entry.ZAID}
 
         meta['length'] = int(ACE.NXS[1])
         meta['NE'] = int(ACE.NXS[3])
         return meta
 
-    def _default(self, index):
+    def _default(self, entry):
         """
         _default does nothing, but prevents Python from crashing when
         """
-        path = pathlib.Path(self.datapath, self.XSDIR.loc[index].path)
+        path = pathlib.Path(self.datapath, entry.path)
 
-        address = self.XSDIR.loc[index].address
+        address = entry.address
         ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
 
-        meta = {'ZAID': self.XSDIR.loc[index].ZAID}
+        meta = {'ZAID': entry.ZAID}
 
         meta['length'] = int(ACE.NXS[1])
         return meta
 
-    def extend(self, index):
+    def extend(self, entry):
         """
         extend will add metadata to a row of self.XSDIR given the row's index
         """
-        lib_type = self.XSDIR.loc[index].lib_type
-
-        try:
-            return self.metadataFunctions.get(lib_type, self._default)(index)
-        except Exception as e:
-            # print("Problem reading metadata of: {}".format(self.XSDIR.loc[index].ZAID))
-            self.problems.append(index)
+        print("Extending {}".format(entry.ZAID))
+        return self.metadataFunctions.get(
+            entry.lib_type, self._default)(entry)
+        # try:
+        #     return self.metadataFunctions.get(
+        #         entry.lib_type, self._default)(entry)
+        # except Exception as e:
+        #     # print("Problem reading metadata of: {}".format(entry.ZAID))
+        #     self.problems.append(entry.ZAID)
 
 
 class DisplayData:
@@ -278,12 +280,16 @@ if __name__ == "__main__":
     if not args.dont_generate:
         generateJSON(args.xsdir, args.N)
 
-    XSDIR = loadXSDIR()
+    XSDIR = loadXSDIR().query('ZA == 92235')
     # display = DisplayData(XSDIR)
     # display()
 
     ddir = DataDirectory(args.xsdir)
+    XSDIR = ddir.XSDIR.query('ZA == 1001')
+    print("Length before apply:: {}".format(len(XSDIR)))
+    meta = XSDIR.apply(ddir.extend, axis=1)
+    results = pd.DataFrame([r for r in meta if r]).fillna(0)
 
-    zaid = "40000.56c"
-    zaid = '1001.80c'
-    ddir.extend(ddir.XSDIR.query('ZAID == @zaid').index)
+    XSDIR = pd.merge(XSDIR, results, on ='ZAID')
+
+    print("Length after apply:: {}".format(len(XSDIR)))
