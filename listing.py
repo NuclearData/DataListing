@@ -217,7 +217,6 @@ def generateJSON(xsdirPath, N=max(1, mp.cpu_count()-1)):
 
     # results = process_map(ddir.extend, ddir.XSDIR.index, max_workers=N,
     #                       chunksize=1)
-    results = []
     with mp.Pool(N) as pool:
         results = list(
             tqdm(pool.imap(ddir.extend, ddir.XSDIR.index), total=len(ddir.XSDIR)))
