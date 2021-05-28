@@ -10,6 +10,7 @@ import textwrap
 
 import pandas as pd
 import IPython.display
+from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import process_map
 
 import xsdir
@@ -131,19 +132,13 @@ class DataDirectory:
         meta['length'] = int(ACE.NXS[1])
         return meta
 
-    def extend(self, entry):
+    def extend(self, index):
         """
         extend will add metadata to a row of self.XSDIR given the row's index
         """
-        print("Extending {}".format(entry.ZAID))
+        entry = self.XSDIR.loc[index]
         return self.metadataFunctions.get(
             entry.lib_type, self._default)(entry)
-        # try:
-        #     return self.metadataFunctions.get(
-        #         entry.lib_type, self._default)(entry)
-        # except Exception as e:
-        #     # print("Problem reading metadata of: {}".format(entry.ZAID))
-        #     self.problems.append(entry.ZAID)
 
 
 class DisplayData:
@@ -280,16 +275,4 @@ if __name__ == "__main__":
     if not args.dont_generate:
         generateJSON(args.xsdir, args.N)
 
-    XSDIR = loadXSDIR().query('ZA == 92235')
-    # display = DisplayData(XSDIR)
-    # display()
-
-    ddir = DataDirectory(args.xsdir)
-    XSDIR = ddir.XSDIR.query('ZA == 1001')
-    print("Length before apply:: {}".format(len(XSDIR)))
-    meta = XSDIR.apply(ddir.extend, axis=1)
-    results = pd.DataFrame([r for r in meta if r]).fillna(0)
-
-    XSDIR = pd.merge(XSDIR, results, on ='ZAID')
-
-    print("Length after apply:: {}".format(len(XSDIR)))
+    XSDIR = loadXSDIR()
