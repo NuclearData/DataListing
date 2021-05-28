@@ -4,14 +4,13 @@
 import pathlib
 import os
 import collections
-import multiprocessing
+import multiprocessing as mp
 import argparse
 import textwrap
 
 import pandas as pd
 import IPython.display
 from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import process_map
 
 import xsdir
 import ace
@@ -209,17 +208,19 @@ def loadXSDIR(filename=xsdirName):
         print("Please first run: python listing.py to generate {}"
               .format(xsdirName))
 
-def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1)):
+def generateJSON(xsdirPath, N=max(1, mp.cpu_count()-1)):
     """
     generateJSON will generate the JSON version of the XSDIR pandas DataFrame.
     It saves the fil
     """
     ddir = DataDirectory(xsdirPath)
-    print("after ddir: {}".format(len(ddir.XSDIR)))
 
-    results = process_map(ddir.extend, ddir.XSDIR.index, max_workers=N,
-                          chunksize=1)
-    print("after results: {}".format(len(ddir.XSDIR)))
+    # results = process_map(ddir.extend, ddir.XSDIR.index, max_workers=N,
+    #                       chunksize=1)
+    results = []
+    with mp.Pool(N) as pool:
+        results = list(
+            tqdm(pool.imap(ddir.extend, ddir.XSDIR.index), total=len(ddir.XSDIR)))
 
     dtype = {
         # Continuous-energy neutron
@@ -239,7 +240,6 @@ def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1)):
     results = pd.DataFrame([r for r in results if r]).fillna(0).astype(dtype)
 
     ddir.XSDIR = pd.merge(ddir.XSDIR, results, on='ZAID')
-    print("after merge: {}".format(len(ddir.XSDIR)))
 
     with open(xsdirName, 'w') as jsonFile:
         json = ddir.XSDIR.to_json(orient='records', default_handler=str, indent=2)
@@ -249,6 +249,8 @@ def generateJSON(xsdirPath, N=max(1, multiprocessing.cpu_count()-1)):
         print("There were problems reading data from these ZAIDs:")
         for ZAID in ddir.problems:
             print("\t{}".format(ZAID))
+
+    print("Finished generating JSON from XSDIR.")
 
 
 def processInput():
@@ -260,7 +262,7 @@ def processInput():
         help="Path to xsdir file. Defaults to $DATAPATH/xsdir")
 
     parser.add_argument('-N', type=int,
-        default=max(1, multiprocessing.cpu_count()-1),
+        default=max(1, mp.cpu_count()-1),
         help="Number of parallel threads.")
 
     parser.add_argument('--dont-generate', action='store_true', default=False,
