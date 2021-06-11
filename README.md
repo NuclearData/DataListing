@@ -1,31 +1,13 @@
 # Data Listing
-This repository contains everything needed to list the data available for MCNP.
-
-## Requirements
-- Python 3.6+
-
-### Third-Party Python Libraries
-We utilize a few third-party libraries. These are all widely used and possibly already installed if you use a scientific Python distribution. 
-
-- [Jupyter-lab](https://jupyterlab.readthedocs.io/en/stable/index.html)&mdash;[Project Jupyter's](https://jupyter.org) next-generation notebook interface.
-
-   Even though jupyter-lab is "next-generation", it is completely stable (as of June 2019) and is the future interface for the Jupyter Project.
-
-- [pandas](https://pandas.pydata.org) Data analysis and manipulation tool.
-- [tqdm](https://tqdm.github.io/) A Fast, Extensible Progress Bar for Python and CLI
-- [jupyterlab_widgets](https://pypi.org/project/jupyterlab-widgets/) Necessary to make nice looking progress bar in Jupyter Notebook. This one is not required.
-
-If they are not already installed, you can easily install them using [`pip`](https://pip.pypa.io/en/stable/).
-
-```shell
-
-# pip install jupyterlab   # If you are seeing these instructions, you already have jupyterlab
-pip install pandas
-pip install tqdm
-pip install jupyterlab_widgets
-```
+This is a tool to list the data files available to MCNP on your machine. It uses the very nice [JupyterLab](https://jupyter.org) package to combine viewing and computing in the same tool.
 
 ## Getting Started
+First, make sure you have the [prerequisites](Requirements.ipynb); they are all commonly-available Python packages. After you have ensured that all the packages are installed, begin the tool by executing the following command in the same directory as this README file. It will open everything in the default browser on your machine. (If you see the source of the README file instead of a nicely-rendered version, right-click `README.md` in the window on the left and select *Open With* -> *Markdown Preview*µ)
+```shell
+jupyter-lab
+```
+
+
 See [Getting Started](GettingStarted.ipynb) to begin using this tool. After viewing that, see [Listing](Listing.md) to see what data is on your machine.
 
 ## Issues and Questions

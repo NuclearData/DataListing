@@ -92,6 +92,7 @@ class DataDirectory:
         meta = {'ZAID': entry.ZAID}
         meta['NA'] = int(ACE.NXS[3] + 1)
         meta['NE'] = int(ACE.NXS[4])
+        meta['IZ'] = ACE._IZ
 
         if ACE.NXS[7] == 2:
             meta['representation'] = 'continuous'
@@ -235,6 +236,7 @@ def generateJSON(xsdirPath, N=max(1, mp.cpu_count()-1)):
         # Thermal Scattering
         'NA': int,
         'representation': str,
+        # 'IZ': list,
     }
     results = pd.DataFrame([r for r in results if r]).fillna(0).astype(dtype)
 
@@ -277,3 +279,4 @@ if __name__ == "__main__":
         generateJSON(args.xsdir, args.N)
 
     XSDIR = loadXSDIR()
+
