@@ -27,23 +27,22 @@ class DataDirectory:
             'nc': self._fastNeutron,
             't': self._thermalScattering,
             'p': self._photon,
+            'h': self._chargedParticle, # hydrogen/proton
+            'o': self._chargedParticle, # deuteron
+            'r': self._chargedParticle, # triton
+            's': self._chargedParticle, # helion/He-3
+            'a': self._chargedParticle, # alpha/He-4
         }
 
         AWRs, self.XSDIR = xsdir.readXSDIR(xsdirPath)
 
-    def _fastNeutron(self, entry):
+    def _fastNeutron(self, entry, ACE):
         """
         Add metadata from all fast neutron ACE files.
 
-        index: Location in self.XSDIR of row where we are adding metadata
+        entry: Row of pandas data frame object
         """
-        path = pathlib.Path(self.datapath, entry.path)
-
-        address = entry.address
-        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
-
-        meta = {'ZAID': entry.ZAID}
-        meta[ 'length'] = int(ACE.NXS[1])
+        meta = {}
         NE = int(ACE.NXS[3])
         meta[ 'NE'] = NE
         meta[ 'Emax'] = round(ACE.XSS[NE], 1)
@@ -78,18 +77,13 @@ class DataDirectory:
 
         return meta
 
-    def _thermalScattering(self, entry):
+    def _thermalScattering(self, entry, ACE):
         """
         Add metadata from thermal scattering ACE files.
 
-        index: Location in self.XSDIR of row where we are adding metadata
+        entry: Row of pandas data frame object
         """
-        path = pathlib.Path(self.datapath, entry.path)
-
-        address = entry.address
-        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
-
-        meta = {'ZAID': entry.ZAID}
+        meta = {}
         meta['NA'] = int(ACE.NXS[3] + 1)
         meta['NE'] = int(ACE.NXS[4])
         meta['IZ'] = ACE._IZ
@@ -101,44 +95,53 @@ class DataDirectory:
 
         return meta
 
-    def _photon(self, entry):
+    def _photon(self, entry, ACE):
         """
         Add metadata from photon ACE files.
 
-        index: Location in self.XSDIR of row where we are adding metadata
+        entry: Row of pandas data frame object
         """
-        path = pathlib.Path(self.datapath, entry.path)
-
-        address = entry.address
-        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
-
-        meta = {'ZAID': entry.ZAID}
-
-        meta['length'] = int(ACE.NXS[1])
+        meta = {}
         meta['NE'] = int(ACE.NXS[3])
         return meta
 
-    def _default(self, entry):
+    def _chargedParticle(self, entry, ACE):
+        """
+        Add metadata from the charged-particle ACE files.
+
+        entry: Row of pandas data frame object
+        """
+
+        meta = {}
+        meta['target'] = entry.ZA
+        return meta
+
+    def _default(self, entry, ACE):
         """
         _default does nothing, but prevents Python from crashing when
         """
-        path = pathlib.Path(self.datapath, entry.path)
-
-        address = entry.address
-        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
-
-        meta = {'ZAID': entry.ZAID}
-
-        meta['length'] = int(ACE.NXS[1])
-        return meta
+        return {}
 
     def extend(self, index):
         """
         extend will add metadata to a row of self.XSDIR given the row's index
         """
         entry = self.XSDIR.loc[index]
-        return self.metadataFunctions.get(
-            entry.lib_type, self._default)(entry)
+        path = pathlib.Path(self.datapath, entry.path)
+
+        address = entry.address
+        ACE = ace.ace(filename=path, headerOnly=False, start_line=address)
+
+        meta = {'ZAID': entry.ZAID}
+
+        meta['length'] = int(ACE.NXS[1])
+        meta['Date'] = ACE.process_date
+
+        meta2 = self.metadataFunctions.get(
+            entry.lib_type, self._default)(entry, ACE)
+
+        meta.update(meta2)
+        return meta
 
 
 class DisplayData:
@@ -151,16 +154,13 @@ class DisplayData:
         self.lib_type = lib_type
 
         self.displayColumns = {
-            'c':  ['ZAID', 'AWR', 'library', 'ZA', 'T(K)', 'NE',
+            'c':  ['ZAID', 'AWR', 'library', 'path','ZA', 'T(K)', 'Date', 'NE',
                        'Emax', 'GPD', 'nubar', 'CP', 'DN', 'UR'],
-            'nc': ['ZAID', 'AWR', 'library', 'ZA', 'T(K)', 'NE',
+            'nc': ['ZAID', 'AWR', 'library',  'path','ZA', 'T(K)', 'Date', 'NE',
                        'Emax', 'GPD', 'nubar', 'CP', 'DN', 'UR'],
-            't': ['ZAID', 'library', 'ZA', 'T(K)', 'NE', 'NA', 'representation'],
-            'h': ['ZAID', 'AWR', 'library', 'ZA', 'T(K)'],
-            'p': ['ZAID', 'AWR', 'library', 'ZA', 'T(K)'],
-            'm': ['ZAID', 'AWR', 'library', 'ZA', 'T(K)'],
-            'y': ['ZAID', 'AWR', 'library', 'ZA', 'T(K)'],
-            None: self.XSDIR.columns
+            't': ['ZAID', 'library', 'path','ZA', 'T(K)', 'Date', 'NE', 'NA',
+                  'representation'],
+            None: ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date'],
         }
 
     def __call__(self, ZA=None, columns=[]):
@@ -171,8 +171,9 @@ class DisplayData:
         else:
             lt = self.lib_type
 
+        defaultColumns = ['ZAID', 'AWR', 'library', 'path','ZA', 'T(K)', 'Date']
         if not columns:
-            columns = self.displayColumns.get(lt, self.XSDIR.columns)
+            columns = self.displayColumns.get(lt, defaultColumns)
 
         if ZA:
             XSDIR = self.XSDIR.query('ZA == @ZA')
@@ -216,13 +217,14 @@ def generateJSON(xsdirPath, N=max(1, mp.cpu_count()-1)):
     """
     ddir = DataDirectory(xsdirPath)
 
-    # results = process_map(ddir.extend, ddir.XSDIR.index, max_workers=N,
-    #                       chunksize=1)
+    # ddir.XSDIR = ddir.XSDIR.query('ZA == 1001 or ZA == "lwtr"')
     with mp.Pool(N) as pool:
         results = list(
             tqdm(pool.imap(ddir.extend, ddir.XSDIR.index), total=len(ddir.XSDIR)))
 
     dtype = {
+        'Date': str,
+
         # Continuous-energy neutron
         'length': int,
         'NE': int,
@@ -236,7 +238,9 @@ def generateJSON(xsdirPath, N=max(1, mp.cpu_count()-1)):
         # Thermal Scattering
         'NA': int,
         'representation': str,
-        # 'IZ': list,
+
+        # Charged-particle
+        'target': int,
     }
     results = pd.DataFrame([r for r in results if r]).fillna(0).astype(dtype)
 
@@ -273,6 +277,7 @@ def processInput():
 
 
 if __name__ == "__main__":
+    __spec__ = None
 
     args = processInput()
     if not args.dont_generate:
