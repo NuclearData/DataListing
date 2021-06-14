@@ -16,5 +16,4 @@ In the table below are given the different kinds of data, generally they are ref
 | [Photonuclear](Photonuclear.ipynb)                             | `u`         |
 | [Dosimetry](Dosimetry.ipynb)                                   | `y`         |
 | [Electron](Electron.ipynb)                                     | `e`         |
-| [Proton](Proton.ipynb)                                         | `h`         |
 | [Charged-Particle](ChargedParticle.ipynb)                      | varied      |
