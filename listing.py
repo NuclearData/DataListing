@@ -7,6 +7,7 @@ import collections
 import multiprocessing as mp
 import argparse
 import textwrap
+import glob
 
 import pandas as pd
 import IPython.display
@@ -262,8 +263,14 @@ def processInput():
     description= "Preparing to list available ACE data"
     parser = argparse.ArgumentParser(description=description)
 
+    # Get default XSDIR
+    defaultXSDIR = max(
+        glob.glob(pathlib.Path(os.environ['DATAPATH'], "xsdir*").as_posix()),
+        key = os.path.getctime
+    )
+
     parser.add_argument('--xsdir', type=pathlib.Path,
-        default = pathlib.Path(os.environ['DATAPATH'], 'xsdir'),
+        default = defaultXSDIR,
         help="Path to xsdir file. Defaults to $DATAPATH/xsdir")
 
     parser.add_argument('-N', type=int,
