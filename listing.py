@@ -7,7 +7,6 @@ import collections
 import multiprocessing as mp
 import argparse
 import textwrap
-import glob
 
 import pandas as pd
 import IPython.display
@@ -265,8 +264,8 @@ def processInput():
 
     # Get default XSDIR
     defaultXSDIR = max(
-        glob.glob(pathlib.Path(os.environ['DATAPATH'], "xsdir*").as_posix()),
-        key = os.path.getctime
+        pathlib.Path(os.environ['DATAPATH']).glob("xsdir*"),
+        key = lambda p: p.stat().st_ctime
     )
 
     parser.add_argument('--xsdir', type=pathlib.Path,
