@@ -9,7 +9,7 @@ If you have a question, please start a [discussion](https://github.com/NuclearDa
 First, make sure you have the [prerequisites](Requirements.ipynb); they are all commonly-available Python packages. After you have ensured that all the packages are installed, begin the tool by executing the following command in the same directory as this README file. 
 
 ```shell
-jupyter-lab README.md
+jupyter lab README.md
 ```
 
 It will open everything in the default browser on your machine. (If you see the source of the README file instead of a nicely-rendered version, right-click `README.md` in the window on the left and select *Open With* -> *Markdown Preview*)
