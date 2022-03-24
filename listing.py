@@ -113,7 +113,10 @@ class DataDirectory:
         """
 
         meta = {}
+        NE = int(ACE.NXS[3])
         meta['target'] = entry.ZA
+        meta[ 'NE'] = NE
+        meta[ 'Emax'] = round(ACE.XSS[NE], 1)
         return meta
 
     def _default(self, entry, ACE):
@@ -160,6 +163,16 @@ class DisplayData:
                        'Emax', 'GPD', 'nubar', 'CP', 'DN', 'UR'],
             't': ['ZAID', 'library', 'path','ZA', 'T(K)', 'Date', 'NE', 'NA',
                   'representation'],
+            'h': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
+                  'Emax'],
+            'o': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
+                  'Emax'],
+            'r': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
+                  'Emax'],
+            's': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
+                  'Emax'],
+            'a': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
+                  'Emax'],
             None: ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date'],
         }
 
