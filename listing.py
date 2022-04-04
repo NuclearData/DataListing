@@ -115,8 +115,9 @@ class DataDirectory:
         meta = {}
         NE = int(ACE.NXS[3])
         meta['target'] = entry.ZA
-        meta[ 'NE'] = NE
-        meta[ 'Emax'] = round(ACE.XSS[NE], 1)
+        meta['NE'] = NE
+        meta['Emin'] = round(ACE.XSS[0], 1)
+        meta['Emax'] = round(ACE.XSS[NE], 1)
         return meta
 
     def _default(self, entry, ACE):
@@ -164,15 +165,15 @@ class DisplayData:
             't': ['ZAID', 'library', 'path','ZA', 'T(K)', 'Date', 'NE', 'NA',
                   'representation'],
             'h': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
-                  'Emax'],
+                  'Emin', 'Emax'],
             'o': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
-                  'Emax'],
+                  'Emin', 'Emax'],
             'r': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
-                  'Emax'],
+                  'Emin', 'Emax'],
             's': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
-                  'Emax'],
-            'a': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
-                  'Emax'],
+                  'Emin', 'Emax'],
+            'h': ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date', 'NE',
+                  'Emin', 'Emax'],
             None: ['ZAID', 'AWR', 'library', 'path', 'ZA', 'T(K)', 'Date'],
         }
 
@@ -254,6 +255,7 @@ def generateJSON(xsdirPath, N=max(1, mp.cpu_count()-1)):
 
         # Charged-particle
         'target': int,
+        'Emin': float,
     }
     results = pd.DataFrame([r for r in results if r]).fillna(0).astype(dtype)
 
