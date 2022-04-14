@@ -229,6 +229,8 @@ def generateJSON(xsdirPath, N=max(1, mp.cpu_count()-1)):
     generateJSON will generate the JSON version of the XSDIR pandas DataFrame.
     It saves the fil
     """
+    print("Using",N, "CPUs to process",xsdirPath)
+
     ddir = DataDirectory(xsdirPath)
 
     # ddir.XSDIR = ddir.XSDIR.query('ZA == 1001 or ZA == "lwtr"')
