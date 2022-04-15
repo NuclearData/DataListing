@@ -45,7 +45,7 @@ class DataDirectory:
         meta = {}
         NE = int(ACE.NXS[3])
         meta[ 'NE'] = NE
-        meta[ 'Emax'] = round(ACE.XSS[NE], 1)
+        meta[ 'Emax'] = round(ACE.XSS[NE-1], 1)
         if (ACE.JXS[12] != 0) or (ACE.JXS[13] != 0):
             meta[ 'GPD'] = True
         else:
@@ -117,7 +117,7 @@ class DataDirectory:
         meta['target'] = entry.ZA
         meta['NE'] = NE
         meta['Emin'] = round(ACE.XSS[0], 1)
-        meta['Emax'] = round(ACE.XSS[NE], 1)
+        meta['Emax'] = round(ACE.XSS[NE-1], 1)
         return meta
 
     def _default(self, entry, ACE):
