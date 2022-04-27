@@ -302,6 +302,7 @@ if __name__ == "__main__":
     __spec__ = None
 
     args = processInput()
+    print("Reading from xsdir at: {}".format(args.xsdir))
     print("Reading xsdir using {} parallel threads.".format(args.N))
 
     if not args.xsdir.is_file():
