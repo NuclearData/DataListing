@@ -45,7 +45,7 @@ class DataDirectory:
         meta = {}
         NE = int(ACE.NXS[3])
         meta[ 'NE'] = NE
-        meta[ 'Emax'] = round(ACE.XSS[NE], 1)
+        meta[ 'Emax'] = round(ACE.XSS[NE-1], 1)
         if (ACE.JXS[12] != 0) or (ACE.JXS[13] != 0):
             meta[ 'GPD'] = True
         else:
@@ -117,7 +117,7 @@ class DataDirectory:
         meta['target'] = entry.ZA
         meta['NE'] = NE
         meta['Emin'] = round(ACE.XSS[0], 1)
-        meta['Emax'] = round(ACE.XSS[NE], 1)
+        meta['Emax'] = round(ACE.XSS[NE-1], 1)
         return meta
 
     def _default(self, entry, ACE):
@@ -227,8 +227,9 @@ def loadXSDIR(filename=xsdirName):
 def generateJSON(xsdirPath, N=max(1, mp.cpu_count()-1)):
     """
     generateJSON will generate the JSON version of the XSDIR pandas DataFrame.
-    It saves the fil
+    The file name is xsdir.json
     """
+
     ddir = DataDirectory(xsdirPath)
 
     # ddir.XSDIR = ddir.XSDIR.query('ZA == 1001 or ZA == "lwtr"')
@@ -301,6 +302,13 @@ if __name__ == "__main__":
     __spec__ = None
 
     args = processInput()
+    print("Reading from xsdir at: {}".format(args.xsdir))
+    print("Reading xsdir using {} parallel threads.".format(args.N))
+
+    if not args.xsdir.is_file():
+        print("ERROR: xsdir file {}".format(args.xsdir),"does not exist")
+        quit()
+
     if not args.dont_generate:
         generateJSON(args.xsdir, args.N)
 
